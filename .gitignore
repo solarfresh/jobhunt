@@ -1,3 +1,4 @@
 pgdata/*
 jobhuntpgdata/*
 __pycache__
+alembic.ini
