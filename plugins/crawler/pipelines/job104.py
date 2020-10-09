@@ -1,4 +1,5 @@
 import pandas as pd
+from itemadapter import ItemAdapter
 
 
 class Job104KeywordPipeline:
@@ -14,5 +15,5 @@ class Job104KeywordPipeline:
         self.items.to_csv('/usr/local/airflow/job104keyword.csv', index=False)
 
     def process_item(self, item, spider):
-        self.items.append(item, ignore_index=True)
+        self.items = self.items.append(ItemAdapter(item).asdict(), ignore_index=True)
         return item
