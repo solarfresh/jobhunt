@@ -1,4 +1,3 @@
-from datetime import datetime
 from scrapy import (Request, Spider)
 from typing import List
 from urllib.parse import (parse_qsl, quote, urlencode, urlparse, urlunparse)
@@ -8,10 +7,10 @@ class Job104KeywordSpider(Spider):
     name = "job104keywordspider"
 
     def __init__(self, keywords: List[str], *args, **kwargs):
-        # year = datetime.now().year - 2
         self.start_urls = [
             'https://www.104.com.tw/jobs/search/?ro=0' \
             '&keyword={0}' \
+            '&isnew=30' \
             '&jobsource=2018indexpoc' \
             '&order=11' \
             '&asc=0' \
@@ -20,18 +19,10 @@ class Job104KeywordSpider(Spider):
         super(Job104KeywordSpider).__init__(*args, **kwargs)
 
     def update_start_urls(self, keywords: List[str]):
-        self.start_urls = [
-            'https://www.104.com.tw/jobs/search/?ro=0' \
-            '&keyword={0}' \
-            '&jobsource=2018indexpoc' \
-            '&order=11' \
-            '&asc=0' \
-            '&page=1'.format(quote(kw))
-            for kw in keywords]
+        self.start_urls = self._build_urls(keywords)
         return self
 
     def start_requests(self):
-        print(self.start_urls)
         for url in self.start_urls:
             yield Request(url=url, callback=self.parse)
 
@@ -82,3 +73,53 @@ class Job104KeywordSpider(Spider):
             url_info = url_info._replace(query=urlencode(query_params))
             next_url = urlunparse(url_info)
             yield Request(url=next_url, callback=self.parse)
+
+    @staticmethod
+    def _build_urls(keywords: List[str]):
+        return [
+            'https://www.104.com.tw/jobs/search/?ro=0' \
+            '&keyword={0}' \
+            '&jobsource=2018indexpoc' \
+            '&order=11' \
+            '&asc=0' \
+            '&page=1'.format(quote(kw))
+            for kw in keywords]
+
+
+class Job104KeywordSearchRelatedSpider(Job104KeywordSpider):
+    name = "job104keywordsearchrelatedspider"
+
+    def __init__(self, keywords: List[str], *args, **kwargs):
+        self.keywords = keywords
+        super(Job104KeywordSearchRelatedSpider, self).__init__(keywords, *args, **kwargs)
+
+    def parse(self, response):
+        next_query_keywords = []
+        for rel_kw in response.css('div#search-relative p a::text'):
+            url_info = urlparse(response.url)
+            query_params = dict(parse_qsl(url_info.query))
+            searched_keyword = rel_kw.get().strip()
+            yield {'keyword': query_params['keyword'],
+                   'searched_keyword': searched_keyword}
+
+            if searched_keyword not in self.keywords:
+                next_query_keywords.append(searched_keyword)
+
+            self.keywords.append(searched_keyword)
+
+        if next_query_keywords:
+            for next_url in self._build_urls(next_query_keywords):
+                yield Request(url=next_url, callback=self.parse)
+
+
+if __name__ == '__main__':
+    from scrapy.crawler import CrawlerProcess
+    process = CrawlerProcess(settings={
+        'ITEM_PIPELINES': {
+            'crawler.pipelines.job104.Job104KeywordSearchRelatedPipeline': 300
+        }
+    })
+    # process = CrawlerProcess()
+    process.crawl(Job104KeywordSearchRelatedSpider, keywords=['演算法'])
+    process.start()
+
