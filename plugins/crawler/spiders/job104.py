@@ -58,6 +58,7 @@ class Job104KeywordSpider(Spider):
             # company_address = company_title[1].split('：')[-1] if company_title[1] else ''
             area, exp, edu = article.css('div ul.job-list-intro li')
             yield {
+                'update_at': update_at,
                 'candi_exp': exp.css('li::text').get(),
                 'candi_edu': edu.css('li::text').get(),
                 'job_id': article_attrib['data-job-no'],
