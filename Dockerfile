@@ -80,9 +80,10 @@ RUN set -ex \
         /usr/share/doc \
         /usr/share/doc-base
 
-COPY script/entrypoint.sh /entrypoint.sh
+COPY scripts/entrypoint.sh /entrypoint.sh
 COPY config/airflow.cfg ${AIRFLOW_USER_HOME}/airflow.cfg
-COPY keys ${AIRFLOW_USER_HOME}/keys
+COPY requirements.txt ${AIRFLOW_USER_HOME}/requirements.txt
+RUN pip install -r ${AIRFLOW_USER_HOME}/requirements.txt
 
 RUN chmod +x /entrypoint.sh
 RUN chown -R airflow: ${AIRFLOW_USER_HOME}
