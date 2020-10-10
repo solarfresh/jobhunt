@@ -12,7 +12,7 @@ class Job104JobListPipeline(BasePipeline):
         if keywords_df.empty:
             self.keywords = ['演算法']
         else:
-            self.keywords = [kw for kw in keywords_df['keyword'].values[0]]
+            self.keywords = [kw for kw in keywords_df['keyword'].values]
 
         spider.update_start_urls(keywords=self.keywords)
 

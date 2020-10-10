@@ -70,11 +70,11 @@ class Job104JobListSpider(Spider):
                 'indcat_name': article_attrib['data-indcat-desc']
             }
 
-        # if item_nb:
-        #     query_params['page'] = str(int(query_params['page']) + 1)
-        #     url_info = url_info._replace(query=urlencode(query_params))
-        #     next_url = urlunparse(url_info)
-        #     yield Request(url=next_url, callback=self.parse)
+        if item_nb:
+            query_params['page'] = str(int(query_params['page']) + 1)
+            url_info = url_info._replace(query=urlencode(query_params))
+            next_url = urlunparse(url_info)
+            yield Request(url=next_url, callback=self.parse)
 
     @staticmethod
     def _build_urls(keywords: List[str]):
