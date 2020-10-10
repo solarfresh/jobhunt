@@ -2,7 +2,6 @@ from typing import Dict, List, Optional
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from scrapy.crawler import CrawlerProcess
-from scrapy import Spider
 
 
 class ScrapyOperator(BaseOperator):
@@ -11,7 +10,7 @@ class ScrapyOperator(BaseOperator):
     @apply_defaults
     def __init__(self,
                  pipelines: Dict,
-                 spider: Spider,
+                 spider,
                  op_args: Optional[List] = None,
                  op_kwargs: Optional[Dict] = None,
                  **kwargs) -> None:

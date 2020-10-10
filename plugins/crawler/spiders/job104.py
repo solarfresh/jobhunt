@@ -104,8 +104,7 @@ class Job104KeywordSearchRelatedSpider(Job104KeywordSpider):
 
             if searched_keyword not in self.keywords:
                 next_query_keywords.append(searched_keyword)
-
-            self.keywords.append(searched_keyword)
+                self.keywords.append(searched_keyword)
 
         if next_query_keywords:
             for next_url in self._build_urls(next_query_keywords):

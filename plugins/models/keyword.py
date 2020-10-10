@@ -1,5 +1,6 @@
+from datetime import datetime
 from sqlalchemy import Sequence
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -14,6 +15,7 @@ class Keyword(Base):
                         primary_key=True,
                         server_default=KEYWORD_ID.next_value())
     keyword = Column(String)
+    create_at = Column(DateTime, default=datetime.utcnow)
 
 
 class KeywordSearchRelation(Base):
@@ -24,3 +26,4 @@ class KeywordSearchRelation(Base):
                                    server_default=KEYWORD_SEARCH_RELATION_ID.next_value())
     keyword_id = Column(Integer)
     searched_keyword_id = Column(Integer)
+    create_at = Column(DateTime, default=datetime.utcnow)

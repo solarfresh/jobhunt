@@ -1,60 +1,66 @@
-# -*- coding: utf-8 -*-
 import pandas as pd
-from typing import Dict
+from airflow.hooks.base_hook import BaseHook
 from sqlalchemy import (create_engine, event, inspect)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from typing import Dict
 
 Base = declarative_base()
 
 
-class SQLConnect(object):
+class SQLHook(BaseHook):
+    cursors = None
+    model_changes = {}
+    model_query = None
+
     def __init__(self,
                  models: Dict[str, Base],
-                 dialect='postgresql',
-                 user='',
-                 passwd='',
-                 host='',
-                 port='',
-                 db=''):
-        db_url = {
-            'mysql': 'mysql+mysqlconnector://{0}:{1}@{2}:{3}/{4}',
-            'hive': 'hive://{0}:{1}@{2}:{3}/{4}',
-            'postgresql': 'postgresql://{0}:{1}@{2}:{3}/{4}',
-        }
-        db_url = db_url[dialect].format(user, passwd, host, port, db)
-        self.engine = create_engine(db_url)
-        self.session = sessionmaker(bind=self.engine)()
+                 sql_conn_id: str):
 
         """
         self.models = {'table_name': ModelClass,}
         """
         self.models = models
+        self.sql_conn_id = sql_conn_id
+        self.session = sessionmaker(bind=self.get_sqlalchemy_engine())()
 
-        self.cursors = None
-        self.entities = None
-        self.model_query = None
-        self.session_response = None
-
-        self.model_changes = {}
         event.listen(self.session, 'before_flush', self.record_ops)
         event.listen(self.session, 'before_commit', self.record_ops)
         event.listen(self.session, 'after_commit', self.after_commit)
         event.listen(self.session, 'after_rollback', self.after_rollback)
 
+    def get_conn(self):
+        """Returns a connection object
+        """
+        db = self.get_connection(self.sql_conn_id)
+        return self.connector.connect(
+            host=db.host,
+            port=db.port,
+            username=db.login,
+            schema=db.schema)
+
+    def get_uri(self):
+        conn = self.get_connection(self.sql_conn_id)
+        login = ''
+        if conn.login:
+            login = '{conn.login}:{conn.password}@'.format(conn=conn)
+        host = conn.host
+        if conn.port is not None:
+            host += ':{port}'.format(port=conn.port)
+        uri = '{conn.conn_type}://{login}{host}/'.format(
+            conn=conn, login=login, host=host)
+        if conn.schema:
+            uri += conn.schema
+        return uri
+
+    def get_sqlalchemy_engine(self, engine_kwargs=None):
+        if engine_kwargs is None:
+            engine_kwargs = {}
+        return create_engine(self.get_uri(), **engine_kwargs)
+
     ################################################################################################################
     # Customized functions which are not included by sqlalchemy
     ################################################################################################################
-
-    @staticmethod
-    def instance2pandas(instances):
-        data = [{col.name: getattr(instance, col.name) for col in instance.__table__.columns}
-                for instance in instances]
-        # data = [instance.__dict__ for instance in instances]
-        df = pd.DataFrame(data)
-        if '_sa_instance_state' in df.columns:
-            df = df.drop('_sa_instance_state', axis=1)
-        return df
 
     def query_and_insert(self, table_name: str, filter_by: list):
         """
@@ -64,23 +70,37 @@ class SQLConnect(object):
         # todo: it takes lots of time, and we have to search a method to fine tune
         exists = []
         for instance in filter_by:
-            query = self.models[table_name].query.filter_by(**instance)
+            query = self.query(table_name).filter_by(**instance)
             if not query.scalar():
                 self.session.add(self.models[table_name](**instance))
             else:
                 exists.append(query.first())
 
         self.session.commit()
-        changes = self.session_response if self.session_response else []
-        responses = exists + changes
-        return self.instance2pandas(responses)
+        # changes = self.session_response if self.session_response else []
+        # responses = exists + changes
+        # return self.instance2pandas(responses)
+
+    # @staticmethod
+    # def instance2pandas(instances):
+    #     if not instances:
+    #         return pd.DataFrame([])
+    #
+    #     data = [{col.name: getattr(instance, col.name) for col in instance.__table__.columns}
+    #             for instance in instances]
+    #     # data = [instance.__dict__ for instance in instances]
+    #     df = pd.DataFrame(data)
+    #     if '_sa_instance_state' in df.columns:
+    #         df = df.drop('_sa_instance_state', axis=1)
+    #     return df
 
     def to_pandas(self):
-        if self.entities is not None:
-            df = pd.DataFrame(columns=self.entities, data=self.cursors)
-            self.entities = None
-        else:
-            df = self.instance2pandas(self.cursors)
+        # if self.entities is not None:
+        #     df = pd.DataFrame(columns=self.entities, data=self.cursors)
+        #     self.entities = None
+        # else:
+        #     df = self.instance2pandas(self.cursors)
+        df = pd.DataFrame(self.cursors)
         return df
 
     ################################################################################################################
@@ -88,7 +108,7 @@ class SQLConnect(object):
     ################################################################################################################
 
     def query(self, table_name: str):
-        self.model_query = self.models[table_name].query
+        self.model_query = self.session.query(self.models[table_name])
         return self
 
     def all(self):
