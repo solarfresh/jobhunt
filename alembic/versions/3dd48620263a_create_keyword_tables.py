@@ -39,3 +39,5 @@ def upgrade():
 def downgrade():
     op.drop_table('keyword')
     op.drop_table('kw_search_relation')
+    op.execute(DropSequence(Sequence('kw_id_seq')))
+    op.execute(DropSequence(Sequence('kw_search_relation_id_seq')))

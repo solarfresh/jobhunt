@@ -10,6 +10,7 @@ Base = declarative_base()
 
 class SQLHook(BaseHook):
     cursors = None
+    entities = None
     model_changes = {}
     model_query = None
 
@@ -81,26 +82,28 @@ class SQLHook(BaseHook):
         # responses = exists + changes
         # return self.instance2pandas(responses)
 
-    # @staticmethod
-    # def instance2pandas(instances):
-    #     if not instances:
-    #         return pd.DataFrame([])
-    #
-    #     data = [{col.name: getattr(instance, col.name) for col in instance.__table__.columns}
-    #             for instance in instances]
-    #     # data = [instance.__dict__ for instance in instances]
-    #     df = pd.DataFrame(data)
-    #     if '_sa_instance_state' in df.columns:
-    #         df = df.drop('_sa_instance_state', axis=1)
-    #     return df
+    @staticmethod
+    def instance2pandas(instances):
+        if not instances:
+            return pd.DataFrame([])
+
+        data = [{col.name: getattr(instance, col.name) for col in instance.__table__.columns}
+                for instance in instances]
+        # data = [instance.__dict__ for instance in instances]
+        df = pd.DataFrame(data)
+        if '_sa_instance_state' in df.columns:
+            df = df.drop('_sa_instance_state', axis=1)
+        return df
 
     def to_pandas(self):
-        # if self.entities is not None:
-        #     df = pd.DataFrame(columns=self.entities, data=self.cursors)
-        #     self.entities = None
-        # else:
-        #     df = self.instance2pandas(self.cursors)
-        df = pd.DataFrame(self.cursors)
+        if not self.cursors:
+            return pd.DataFrame([])
+
+        if self.entities is not None:
+            df = pd.DataFrame(columns=self.entities, data=self.cursors)
+            self.entities = None
+        else:
+            df = self.instance2pandas(self.cursors)
         return df
 
     ################################################################################################################
