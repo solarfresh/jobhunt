@@ -3,7 +3,7 @@ from typing import List
 from urllib.parse import (parse_qsl, quote, urlencode, urlparse, urlunparse)
 
 
-class Job104KeywordSpider(Spider):
+class Job104JobListSpider(Spider):
     name = "job104keywordspider"
 
     def __init__(self, keywords: List[str], *args, **kwargs):
@@ -16,7 +16,7 @@ class Job104KeywordSpider(Spider):
             '&asc=0' \
             '&page=1'.format(quote(kw))
             for kw in keywords]
-        super(Job104KeywordSpider).__init__(*args, **kwargs)
+        super(Job104JobListSpider).__init__(*args, **kwargs)
 
     def update_start_urls(self, keywords: List[str]):
         self.start_urls = self._build_urls(keywords)
@@ -28,6 +28,8 @@ class Job104KeywordSpider(Spider):
 
     def parse(self, response):
         item_nb = 0
+        url_info = urlparse(response.url)
+        query_params = dict(parse_qsl(url_info.query))
         for article in response.css('article'):
             update_at = article.css('div h2 span::text').get()
             if not update_at:
@@ -40,15 +42,17 @@ class Job104KeywordSpider(Spider):
             #  'data-cust-name': '大立光電股份有限公司', 'data-indcat': '1001004002', 'data-indcat-desc': '光學器材製造業',
             #  'data-is-save': '0', 'data-is-apply': '0', 'data-jobsource': '2018indexpoc'}
             article_attrib = article.attrib
+
             # todo: to obtain job name with article.css('div h2 a').get()
-            company_info = article.css('div ul li a').attrib
             # {'href': '//www.104.com.tw/company/agajo2o?jobsource=2018indexpoc', 'target': '_blank',
             #  'title': '公司名：Cino Group_偉斯股份有限公司\n公司住址：新北市汐止區新台五路一段100號18樓（東方科學園區，鄰宏碁總部）'}
             # company_title = company_info['title'].split('\n')
             # company_name = company_title[0].split('：')[-1] if company_title[0] else ''
             # company_address = company_title[1].split('：')[-1] if company_title[1] else ''
+            company_info = article.css('div ul li a').attrib
             area, exp, edu = article.css('div ul.job-list-intro li')
             yield {
+                'keyword': query_params['keyword'],
                 'update_at': update_at,
                 'candi_exp': exp.css('li::text').get(),
                 'candi_edu': edu.css('li::text').get(),
@@ -57,22 +61,20 @@ class Job104KeywordSpider(Spider):
                 'job_role': article_attrib['data-job-ro'],
                 'job_area': area.css('li::text').get(),
                 'job_hot': article.css('div.b-pos-relative a::text').get(),
-                'job_tags': [tag for tag in article.css('div div.job-list-tag span::text').getall()],
+                'job_tags': ','.join([tag for tag in article.css('div div.job-list-tag span::text').getall()]),
                 'job_page_link': article.css('div h2 a').attrib['href'].replace('//', 'https://'),
                 'company_id': article_attrib['data-cust-no'],
                 'company_name': article_attrib['data-cust-name'],
                 'company_page_link': company_info['href'].replace('//', 'https://'),
-                'indcat_id': article_attrib['data-indcat'],
+                'indcat_id': article_attrib['data-indcat'] if article_attrib['data-indcat'] else None,
                 'indcat_name': article_attrib['data-indcat-desc']
             }
 
-        if item_nb:
-            url_info = urlparse(response.url)
-            query_params = dict(parse_qsl(url_info.query))
-            query_params['page'] = str(int(query_params['page']) + 1)
-            url_info = url_info._replace(query=urlencode(query_params))
-            next_url = urlunparse(url_info)
-            yield Request(url=next_url, callback=self.parse)
+        # if item_nb:
+        #     query_params['page'] = str(int(query_params['page']) + 1)
+        #     url_info = url_info._replace(query=urlencode(query_params))
+        #     next_url = urlunparse(url_info)
+        #     yield Request(url=next_url, callback=self.parse)
 
     @staticmethod
     def _build_urls(keywords: List[str]):
@@ -86,7 +88,7 @@ class Job104KeywordSpider(Spider):
             for kw in keywords]
 
 
-class Job104KeywordSearchRelatedSpider(Job104KeywordSpider):
+class Job104KeywordSearchRelatedSpider(Job104JobListSpider):
     name = "job104keywordsearchrelatedspider"
 
     def __init__(self, keywords: List[str], *args, **kwargs):
@@ -109,16 +111,3 @@ class Job104KeywordSearchRelatedSpider(Job104KeywordSpider):
         if next_query_keywords:
             for next_url in self._build_urls(next_query_keywords):
                 yield Request(url=next_url, callback=self.parse)
-
-
-if __name__ == '__main__':
-    from scrapy.crawler import CrawlerProcess
-    process = CrawlerProcess(settings={
-        'ITEM_PIPELINES': {
-            'crawler.pipelines.job104.Job104KeywordSearchRelatedPipeline': 300
-        }
-    })
-    # process = CrawlerProcess()
-    process.crawl(Job104KeywordSearchRelatedSpider, keywords=['演算法'])
-    process.start()
-

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from operators.scrapy_operator import ScrapyOperator
-from crawler.spiders.job104 import (Job104KeywordSpider, Job104KeywordSearchRelatedSpider)
+from crawler.spiders.job104 import (Job104JobListSpider, Job104KeywordSearchRelatedSpider)
 
 # Configuration of DAG
 
@@ -39,19 +39,19 @@ job104_keyword_crawler = ScrapyOperator(
     op_kwargs={'keywords': []}
 )
 
-# job104_keyword_crawler = ScrapyOperator(
-#     task_id='job104_keyword_crawler',
-#     pipelines={
-#         'crawler.pipelines.job104.Job104KeywordPipeline': 300
-#     },
-#     spider=Job104KeywordSpider,
-#     op_kwargs={'keywords': []}
-# )
+job104_joblist_crawler = ScrapyOperator(
+    task_id='job104_joblist_crawler',
+    pipelines={
+        'crawler.pipelines.job104.Job104JobListPipeline': 300
+    },
+    spider=Job104JobListSpider,
+    op_kwargs={'keywords': []}
+)
 
 # Task dependencies
 
 # Successful path
-start_dag >> job104_keyword_crawler >> end_dag
+start_dag >> job104_keyword_crawler >> job104_joblist_crawler >> end_dag
 # start_dag >> end_dag
 
 # Fail path

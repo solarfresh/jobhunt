@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Sequence
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import BigInteger, Column, DateTime, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -17,7 +17,7 @@ class JobList(Base):
                         JOBLIST_ID,
                         primary_key=True,
                         server_default=JOBLIST_ID.next_value())
-    company_id = Column(Integer)
+    company_id = Column(BigInteger)
     company_page_link = Column(String)
     indcat_id = Column(Integer)
     # todo: to be record in another table
@@ -38,16 +38,13 @@ class JobListTmp(Base):
                             JOBLIST_TMP_ID,
                             primary_key=True,
                             server_default=JOBLIST_TMP_ID.next_value())
-    joblist_id = Column(Integer)
+    job_id = Column(Integer)
     keyword = Column(String)
     candi_edu = Column(String)
     candi_exp = Column(String)
     job_hot = Column(String)
     job_name = Column(String)
-    job_pay = Column(String)
-    company_size = Column(String)
-    distance = Column(String)
-    company_type = Column(String)
+    job_tags = Column(String)
     create_at = Column(DateTime, default=datetime.utcnow)
     update_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

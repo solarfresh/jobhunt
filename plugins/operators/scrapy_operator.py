@@ -22,6 +22,7 @@ class ScrapyOperator(BaseOperator):
 
     def execute(self, context: Dict) -> None:
         process = CrawlerProcess(settings={
+            'DOWNLOAD_DELAY': .25,
             'ITEM_PIPELINES': self.item_pipelines
         })
         process.crawl(self.spider, *self.op_args, **self.op_kwargs)

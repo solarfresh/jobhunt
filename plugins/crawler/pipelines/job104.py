@@ -1,25 +1,72 @@
 import logging
 import pandas as pd
-from itemadapter import ItemAdapter
 from crawler.pipelines import BasePipeline
+from datetime import datetime
 from models import jobhunt_hook
 
 
-class Job104KeywordPipeline:
+class Job104JobListPipeline(BasePipeline):
     def open_spider(self, spider):
-        # keywords will be obtained from db
-        keywords = ['演算法']
-        spider.update_start_urls(keywords=keywords)
-        # save to csv before integrating with db
-        self.items = pd.DataFrame()
+        self.joblist_instance_list = []
+        keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
+        if keywords_df.empty:
+            self.keywords = ['演算法']
+        else:
+            self.keywords = [kw for kw in keywords_df['keyword'].values[0]]
+
+        spider.update_start_urls(keywords=self.keywords)
 
     def close_spider(self, spider):
-        # todo: hard coding should be removed
-        self.items.to_csv('/usr/local/airflow/job104keyword.csv', index=False)
+        joblist_instance_set = set(self.joblist_instance_list)
+        for instance in joblist_instance_set:
+            # instance_dict = {col.name: getattr(instance, col.name) for col in instance.__table__.columns}
+            # query = jobhunt_hook.query('joblist').filter_by(**instance_dict)
+            query = jobhunt_hook.query('joblist').filter_by(job_id=instance.job_id)
+            if query.scalar():
+                instance = query.first()
+                instance.update_at = datetime.utcnow()
+            else:
+                jobhunt_hook.session.add(instance)
+
+        jobhunt_hook.session.commit()
 
     def process_item(self, item, spider):
-        self.items = self.items.append(ItemAdapter(item).asdict(), ignore_index=True)
-        return item
+        """
+        The item is a dict with following key-value pairs
+             {
+                'keyword': query_params['keyword'],
+                'update_at': update_at,
+                'candi_exp': exp.css('li::text').get(),
+                'candi_edu': edu.css('li::text').get(),
+                'job_id': article_attrib['data-job-no'],
+                'job_name': article_attrib['data-job-name'],
+                'job_role': article_attrib['data-job-ro'],
+                'job_area': area.css('li::text').get(),
+                'job_hot': article.css('div.b-pos-relative a::text').get(),
+                'job_tags': [tag for tag in article.css('div div.job-list-tag span::text').getall()],
+                'job_page_link': article.css('div h2 a').attrib['href'].replace('//', 'https://'),
+                'company_id': article_attrib['data-cust-no'],
+                'company_name': article_attrib['data-cust-name'],
+                'company_page_link': company_info['href'].replace('//', 'https://'),
+                'indcat_id': article_attrib['data-indcat'],
+                'indcat_name': article_attrib['data-indcat-desc']
+            }
+        """
+        self._append_joblist_instance(item)
+        self._append_joblist_tmp_instance(item)
+
+    def _append_joblist_instance(self, item):
+        instance_dict = {k: item[k] for k in ['company_id', 'company_page_link', 'indcat_id', 'indcat_name',
+                                              'job_area', 'job_id', 'job_page_link', 'job_role']}
+        instance = jobhunt_hook.models['joblist'](**instance_dict)
+        self.joblist_instance_list.append(instance)
+
+    @staticmethod
+    def _append_joblist_tmp_instance(item):
+        instance_dict = {k: item[k] for k in ['job_id', 'keyword', 'candi_edu', 'candi_exp',
+                                              'job_hot', 'job_name', 'job_tags']}
+        instance = jobhunt_hook.models['joblist_tmp'](**instance_dict)
+        jobhunt_hook.session.add(instance)
 
 
 class Job104KeywordSearchRelatedPipeline(BasePipeline):

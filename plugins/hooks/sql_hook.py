@@ -126,6 +126,9 @@ class SQLHook(BaseHook):
         self.model_query = self.model_query.filter_by(**kwargs)
         return self
 
+    def first(self):
+        return self.model_query.first()
+
     def group_by(self, *args):
         self.model_query = self.model_query.group_by(*args)
         return self
@@ -145,6 +148,9 @@ class SQLHook(BaseHook):
     def paginate(self, *args, **kwargs):
         self.model_query = self.model_query.paginate(*args, **kwargs)
         return self
+
+    def scalar(self):
+        return self.model_query.scalar()
 
     def update(self, *args):
         self.model_query = self.model_query.update(*args)
