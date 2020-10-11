@@ -1,4 +1,5 @@
 pgdata/*
 jobhuntpgdata/*
+logs/*
 __pycache__
 alembic.ini

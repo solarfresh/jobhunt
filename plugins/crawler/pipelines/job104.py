@@ -3,12 +3,16 @@ import pandas as pd
 from crawler.pipelines import BasePipeline
 from datetime import datetime
 from models import jobhunt_hook
+from sqlalchemy.sql.expression import func
 
 
 class Job104JobListPipeline(BasePipeline):
     def open_spider(self, spider):
         self.joblist_instance_list = []
-        keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
+        # select.order_by(func.random()) # for PostgreSQL, SQLite
+        # select.order_by(func.rand()) # for MySQL
+        # select.order_by('dbms_random.value') # For Oracle
+        keywords_df = jobhunt_hook.query('keyword').order_by(func.random()).limit(250).all().to_pandas()
         if keywords_df.empty:
             self.keywords = ['演算法']
         else:
@@ -71,7 +75,7 @@ class Job104JobListPipeline(BasePipeline):
 
 class Job104KeywordSearchRelatedPipeline(BasePipeline):
     def open_spider(self, spider):
-        keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
+        keywords_df = jobhunt_hook.query('keyword').order_by(func.random()).limit(250).all().to_pandas()
         self.kw_search_relation = []
         if keywords_df.empty:
             self.keywords = ['演算法']
