@@ -57,6 +57,7 @@ services:
         volumes:
             - ./dags:/usr/local/airflow/dags
 #            - ./data:/usr/local/airflow/data
+            - ./logs:/opt/airflow/logs
             - ./plugins:/usr/local/airflow/plugins
 #            - ./notebook:/usr/local/airflow/notebook
         ports:
@@ -76,6 +77,8 @@ services:
         environment:
             - EXECUTOR=Celery
             - REDIS_PASSWORD=redispass
+        volumes:
+            - ./logs:/opt/airflow/logs
         ports:
             - "5555:5555"
         command: flower
@@ -88,6 +91,7 @@ services:
         volumes:
             - ./dags:/usr/local/airflow/dags
 #            - ./data:/usr/local/airflow/data
+            - ./logs:/opt/airflow/logs
             - ./plugins:/usr/local/airflow/plugins
 #            - ./notebook:/usr/local/airflow/notebook
         environment:
@@ -108,6 +112,7 @@ services:
         volumes:
             - ./dags:/usr/local/airflow/dags
 #            - ./data:/usr/local/airflow/data
+            - ./logs:/opt/airflow/logs
             - ./plugins:/usr/local/airflow/plugins
 #            - ./notebook:/usr/local/airflow/notebook
         environment:

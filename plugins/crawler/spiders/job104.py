@@ -7,6 +7,8 @@ class Job104JobListSpider(Spider):
     name = "job104keywordspider"
 
     def __init__(self, keywords: List[str], *args, **kwargs):
+        # isnew is a parameter to obtain updated job
+        # isnew=1 means the information is updated in a day
         self.start_urls = [
             'https://www.104.com.tw/jobs/search/?ro=0' \
             '&keyword={0}' \
@@ -32,7 +34,8 @@ class Job104JobListSpider(Spider):
         query_params = dict(parse_qsl(url_info.query))
         for article in response.css('article'):
             update_at = article.css('div h2 span::text').get()
-            if not update_at:
+            job_list_intro = article.css('div ul.job-list-intro li')
+            if (not update_at) or (len(job_list_intro) != 3):
                 continue
 
             item_nb += 1
@@ -43,6 +46,8 @@ class Job104JobListSpider(Spider):
             #  'data-is-save': '0', 'data-is-apply': '0', 'data-jobsource': '2018indexpoc'}
             article_attrib = article.attrib
 
+            area, exp, edu = job_list_intro
+
             # todo: to obtain job name with article.css('div h2 a').get()
             # {'href': '//www.104.com.tw/company/agajo2o?jobsource=2018indexpoc', 'target': '_blank',
             #  'title': '公司名：Cino Group_偉斯股份有限公司\n公司住址：新北市汐止區新台五路一段100號18樓（東方科學園區，鄰宏碁總部）'}
@@ -50,7 +55,6 @@ class Job104JobListSpider(Spider):
             # company_name = company_title[0].split('：')[-1] if company_title[0] else ''
             # company_address = company_title[1].split('：')[-1] if company_title[1] else ''
             company_info = article.css('div ul li a').attrib
-            area, exp, edu = article.css('div ul.job-list-intro li')
             yield {
                 'keyword': query_params['keyword'],
                 'update_at': update_at,

@@ -133,6 +133,10 @@ class SQLHook(BaseHook):
         self.model_query = self.model_query.group_by(*args)
         return self
 
+    def limit(self, *args):
+        self.model_query = self.model_query.limit(*args)
+        return self
+
     def join(self, *args):
         self.model_query = self.model_query.join(*args)
         return self
