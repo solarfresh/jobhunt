@@ -68,7 +68,7 @@ class Job104JobListPipeline(BasePipeline):
     @staticmethod
     def _append_joblist_tmp_instance(item):
         instance_dict = {k: item[k] for k in ['job_id', 'keyword', 'candi_edu', 'candi_exp',
-                                              'job_hot', 'job_name', 'job_tags']}
+                                              'job_hot', 'job_name', 'job_tags', 'update_at']}
         instance = jobhunt_hook.models['joblist_tmp'](**instance_dict)
         jobhunt_hook.session.add(instance)
 

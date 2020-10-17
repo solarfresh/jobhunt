@@ -72,10 +72,6 @@ class JobListTag(Base):
                             primary_key=True,
                             server_default=JOBLIST_TAG_ID.next_value())
     joblist_id = Column(Integer)
-    # Following tags appear frequently
-    # company_size = Column(String)
-    # distance = Column(String)
-    # company_type = Column(String)
     tag_name = Column(String)
     create_at = Column(DateTime, default=datetime.utcnow)
     update_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
