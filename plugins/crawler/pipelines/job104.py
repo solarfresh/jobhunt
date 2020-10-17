@@ -75,14 +75,15 @@ class Job104JobListPipeline(BasePipeline):
 
 class Job104KeywordSearchRelatedPipeline(BasePipeline):
     def open_spider(self, spider):
-        keywords_df = jobhunt_hook.query('keyword').order_by(func.random()).limit(250).all().to_pandas()
+        keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
         self.kw_search_relation = []
         if keywords_df.empty:
             self.keywords = ['演算法']
         else:
-            self.keywords = [kw for kw in keywords_df['keyword'].values]
+            self.keywords = [kw for kw in keywords_df['keyword'].sample(frac=1).values]
 
-        spider.update_start_urls(keywords=self.keywords)
+        spider.keywords = keywords_df['keyword'].values
+        spider.update_start_urls(keywords=[self.keywords[0]])
 
     def close_spider(self, spider):
         # To update the table keyword to obtain indices
@@ -101,10 +102,12 @@ class Job104KeywordSearchRelatedPipeline(BasePipeline):
             kw_search_relation_df = pd.DataFrame(columns=['keyword_id', 'searched_keyword_id'])
 
         for kw_index, searched_kw_index in indicing_kw_relation:
-            if kw_search_relation_df[(kw_search_relation_df['keyword_id'] == kw_index) &
-                                     (kw_search_relation_df['searched_keyword_id'] == searched_kw_index)].empty:
-                instance = jobhunt_hook.models['kw_search_relation'](keyword_id=kw_index,
-                                                                     searched_keyword_id=searched_kw_index)
+            instance = jobhunt_hook.models['kw_search_relation'](keyword_id=kw_index,
+                                                                 searched_keyword_id=searched_kw_index)
+
+            query = jobhunt_hook.query('kw_search_relation').filter_by(keyword_id=instance.keyword_id,
+                                                                       searched_keyword_id=instance.searched_keyword_id)
+            if not query.scalar():
                 jobhunt_hook.session.add(instance)
 
         jobhunt_hook.session.commit()
