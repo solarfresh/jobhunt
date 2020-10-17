@@ -2,10 +2,12 @@ version: "3"
 services:
     redis:
         image: 'redis:3.2.7'
+        restart: always
         command: redis-server --requirepass redispass
 
     postgres:
         image: postgres:9.6
+        restart: always
         environment:
             - POSTGRES_USER=airflow
             - POSTGRES_PASSWORD=airflow
@@ -16,6 +18,7 @@ services:
 
     jobhuntsql:
         image: postgres:9.6
+        restart: always
         environment:
             - POSTGRES_USER=jobhunt
             - POSTGRES_PASSWORD=jobhunt
@@ -57,7 +60,7 @@ services:
         volumes:
             - ./dags:/usr/local/airflow/dags
 #            - ./data:/usr/local/airflow/data
-            - ./logs:/opt/airflow/logs
+            - ./logs:/usr/local/airflow/logs
             - ./plugins:/usr/local/airflow/plugins
 #            - ./notebook:/usr/local/airflow/notebook
         ports:
@@ -78,7 +81,7 @@ services:
             - EXECUTOR=Celery
             - REDIS_PASSWORD=redispass
         volumes:
-            - ./logs:/opt/airflow/logs
+            - ./logs:/usr/local/airflow/logs
         ports:
             - "5555:5555"
         command: flower
@@ -91,7 +94,7 @@ services:
         volumes:
             - ./dags:/usr/local/airflow/dags
 #            - ./data:/usr/local/airflow/data
-            - ./logs:/opt/airflow/logs
+            - ./logs:/usr/local/airflow/logs
             - ./plugins:/usr/local/airflow/plugins
 #            - ./notebook:/usr/local/airflow/notebook
         environment:
@@ -112,7 +115,7 @@ services:
         volumes:
             - ./dags:/usr/local/airflow/dags
 #            - ./data:/usr/local/airflow/data
-            - ./logs:/opt/airflow/logs
+            - ./logs:/usr/local/airflow/logs
             - ./plugins:/usr/local/airflow/plugins
 #            - ./notebook:/usr/local/airflow/notebook
         environment:
