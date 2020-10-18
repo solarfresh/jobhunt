@@ -111,7 +111,7 @@ class TransferJobLisLogOperator(TransferJobLisBaseOperator):
                                self.session.models['joblist_tmp'].update_at)\
                 .all().to_pandas()
         for _, row in joblist_tmp_df.iterrows():
-            instance = self.session.models['joblist_tag'](joblist_id=row['joblist_id'],
+            instance = self.session.models['joblist_log'](joblist_id=row['joblist_id'],
                                                           # todo: to record joblist is modified or not
                                                           is_changed=0,
                                                           create_at=row['update_at'])
