@@ -96,3 +96,15 @@ class DeepPartition(object):
         subset_nodes['partition'] = partition.values()
         return [(part, subset_nodes[subset_nodes['partition'] == part].index)
                 for part in subset_nodes['partition'].drop_duplicates()]
+
+
+class SimplifyGraph(nx.Graph):
+
+    def load_from_pandas(self,
+                         nodes_df: pd.DataFrame,
+                         node_column: str,
+                         edges_df: pd.DataFrame,
+                         edge_columns: List[str]) -> None:
+
+        self.add_nodes_from(nodes_df[node_column].values)
+        self.add_edges_from([(e0, e1) for e0, e1 in edges_df[edge_columns].values])
