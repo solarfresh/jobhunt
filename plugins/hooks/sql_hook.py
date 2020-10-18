@@ -118,6 +118,10 @@ class SQLHook(BaseHook):
         self.cursors = self.model_query.all()
         return self
 
+    def delete(self):
+        self.model_query = self.model_query.delete()
+        return self
+
     def filter(self, *args):
         self.model_query = self.model_query.filter(*args)
         return self

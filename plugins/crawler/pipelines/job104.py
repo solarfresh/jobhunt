@@ -86,21 +86,19 @@ class Job104KeywordSearchRelatedPipeline(BasePipeline):
         spider.update_start_urls(keywords=[self.keywords[0]])
 
     def close_spider(self, spider):
-        # To update the table keyword to obtain indices
+        logging.info('To update the table keyword to obtain indices')
         jobhunt_hook.session.commit()
 
-        # To convert keywords into indices
+        logging.info('To convert keywords into indices')
         keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
         keyword_index_dict = {row['keyword']: row['keyword_id'] for _, row in keywords_df.iterrows()}
 
-        # To check the existence
+        logging.info('To check the existence of keyword relation')
         indicing_kw_relation = [(keyword_index_dict[item['keyword']],
                                  keyword_index_dict[item['searched_keyword']])
                                 for item in self.kw_search_relation]
-        kw_search_relation_df = jobhunt_hook.query('kw_search_relation').all().to_pandas()
-        if kw_search_relation_df.empty:
-            kw_search_relation_df = pd.DataFrame(columns=['keyword_id', 'searched_keyword_id'])
 
+        logging.info('To build keyword relation and to update database')
         for kw_index, searched_kw_index in indicing_kw_relation:
             instance = jobhunt_hook.models['kw_search_relation'](keyword_id=kw_index,
                                                                  searched_keyword_id=searched_kw_index)

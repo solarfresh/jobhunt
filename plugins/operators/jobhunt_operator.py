@@ -51,7 +51,6 @@ class TransferJobLisMetaOperator(TransferJobLisBaseOperator):
                                self.session.models['joblist_tmp'].candi_exp,
                                self.session.models['joblist_tmp'].job_hot,
                                self.session.models['joblist_tmp'].job_name,
-                               self.session.models['joblist_tmp'].job_pay,
                                self.session.models['joblist_tmp'].update_at)\
                 .all().to_pandas()
         joblist_tmp_df = joblist_tmp_df.sort_values(by='update_at', ascending=False).drop_duplicates(['joblist_id'])
@@ -78,22 +77,52 @@ class TransferJobLisTagOperator(TransferJobLisBaseOperator):
                       self.session.models['joblist'].job_id == self.session.models['joblist_tmp'].job_id)\
                 .with_entities(self.session.models['joblist'].joblist_id,
                                self.session.models['joblist_tmp'].job_tags,
-                               self.session.models['update_at'].update_at)\
+                               self.session.models['joblist_tmp'].update_at)\
                 .all().to_pandas()
         joblist_tmp_df = joblist_tmp_df\
             .sort_values(by='update_at', ascending=False)\
             .drop_duplicates(['joblist_id', 'job_tags'])
         for _, row in joblist_tmp_df.iterrows():
-            tags = row['tag_name'].split(',')
+            tags = row['job_tags'].split(',')
             for tag in tags:
                 query = self.session.query('joblist_tag').filter_by(joblist_id=row['joblist_id'], tag_name=tag)
                 if query.scalar():
                     instance = query.first()
                     instance.update_at = row['update_at']
                 else:
-                    instance = self.session.models['joblist_meta'](joblist_id=row['joblist_id'],
-                                                                   tag_name=tag,
-                                                                   update_at=row['update_at'])
+                    instance = self.session.models['joblist_tag'](joblist_id=row['joblist_id'],
+                                                                  tag_name=tag,
+                                                                  update_at=row['update_at'])
                     self.session.session.add(instance)
 
+        self.session.session.commit()
+
+
+class TransferJobLisLogOperator(TransferJobLisBaseOperator):
+
+    def execute(self, context):
+        self.session = self.get_hook()
+        joblist_tmp_df = \
+            self.session\
+            .query('joblist_tmp')\
+                .join(self.session.models['joblist'],
+                      self.session.models['joblist'].job_id == self.session.models['joblist_tmp'].job_id)\
+                .with_entities(self.session.models['joblist'].joblist_id,
+                               self.session.models['joblist_tmp'].update_at)\
+                .all().to_pandas()
+        for _, row in joblist_tmp_df.iterrows():
+            instance = self.session.models['joblist_tag'](joblist_id=row['joblist_id'],
+                                                          # todo: to record joblist is modified or not
+                                                          is_changed=0,
+                                                          create_at=row['update_at'])
+            self.session.session.add(instance)
+
+        self.session.session.commit()
+
+
+class DeleteJobLisTmpOperator(TransferJobLisBaseOperator):
+
+    def execute(self, context):
+        self.session = self.get_hook()
+        self.session.query('joblist_tmp').all().delete()
         self.session.session.commit()

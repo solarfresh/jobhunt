@@ -60,7 +60,6 @@ class JobListMeta(Base):
     candi_exp = Column(String)
     job_hot = Column(String)
     job_name = Column(String)
-    job_pay = Column(String)
     create_at = Column(DateTime, default=datetime.utcnow)
     update_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

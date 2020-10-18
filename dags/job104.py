@@ -2,7 +2,10 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from operators.scrapy_operator import ScrapyOperator
-from operators.jobhunt_operator import (TransferJobLisMetaOperator, TransferJobLisTagOperator)
+from operators.jobhunt_operator import (TransferJobLisMetaOperator,
+                                        TransferJobLisTagOperator,
+                                        TransferJobLisLogOperator,
+                                        DeleteJobLisTmpOperator)
 from crawler.spiders.job104 import (Job104JobListSpider, Job104KeywordSearchRelatedSpider)
 
 # Configuration of DAG
@@ -59,11 +62,25 @@ transfer_to_joblist_tag = TransferJobLisTagOperator(
     sql_conn_id='jobhunt_sql'
 )
 
+transfer_to_joblist_log = TransferJobLisLogOperator(
+    task_id='transfer_to_joblist_log',
+    sql_conn_id='jobhunt_sql'
+)
+
+delete_joblist_tmp = DeleteJobLisTmpOperator(
+    task_id='delete_joblist_tmp',
+    sql_conn_id='jobhunt_sql'
+)
+
+
 # Task dependencies
 
 # Successful path
 start_dag >> job104_keyword_crawler >> job104_joblist_crawler
-job104_joblist_crawler >> (transfer_to_joblist_meta, transfer_to_joblist_tag) >> end_dag
+job104_joblist_crawler >> (transfer_to_joblist_meta,
+                           transfer_to_joblist_tag,
+                           transfer_to_joblist_log) >> delete_joblist_tmp
+delete_joblist_tmp >> end_dag
 # start_dag >> end_dag
 
 # Fail path
