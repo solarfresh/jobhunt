@@ -68,43 +68,44 @@ class Job104JobListPipeline(BasePipeline):
     @staticmethod
     def _append_joblist_tmp_instance(item):
         instance_dict = {k: item[k] for k in ['job_id', 'keyword', 'candi_edu', 'candi_exp',
-                                              'job_hot', 'job_name', 'job_tags']}
+                                              'job_hot', 'job_name', 'job_tags', 'update_at']}
         instance = jobhunt_hook.models['joblist_tmp'](**instance_dict)
         jobhunt_hook.session.add(instance)
 
 
 class Job104KeywordSearchRelatedPipeline(BasePipeline):
     def open_spider(self, spider):
-        keywords_df = jobhunt_hook.query('keyword').order_by(func.random()).limit(250).all().to_pandas()
+        keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
         self.kw_search_relation = []
         if keywords_df.empty:
             self.keywords = ['演算法']
         else:
-            self.keywords = [kw for kw in keywords_df['keyword'].values]
+            self.keywords = [kw for kw in keywords_df['keyword'].sample(frac=1).values]
 
-        spider.update_start_urls(keywords=self.keywords)
+        spider.keywords = keywords_df['keyword'].values
+        spider.update_start_urls(keywords=[self.keywords[0]])
 
     def close_spider(self, spider):
-        # To update the table keyword to obtain indices
+        logging.info('To update the table keyword to obtain indices')
         jobhunt_hook.session.commit()
 
-        # To convert keywords into indices
+        logging.info('To convert keywords into indices')
         keywords_df = jobhunt_hook.query('keyword').all().to_pandas()
         keyword_index_dict = {row['keyword']: row['keyword_id'] for _, row in keywords_df.iterrows()}
 
-        # To check the existence
+        logging.info('To check the existence of keyword relation')
         indicing_kw_relation = [(keyword_index_dict[item['keyword']],
                                  keyword_index_dict[item['searched_keyword']])
                                 for item in self.kw_search_relation]
-        kw_search_relation_df = jobhunt_hook.query('kw_search_relation').all().to_pandas()
-        if kw_search_relation_df.empty:
-            kw_search_relation_df = pd.DataFrame(columns=['keyword_id', 'searched_keyword_id'])
 
+        logging.info('To build keyword relation and to update database')
         for kw_index, searched_kw_index in indicing_kw_relation:
-            if kw_search_relation_df[(kw_search_relation_df['keyword_id'] == kw_index) &
-                                     (kw_search_relation_df['searched_keyword_id'] == searched_kw_index)].empty:
-                instance = jobhunt_hook.models['kw_search_relation'](keyword_id=kw_index,
-                                                                     searched_keyword_id=searched_kw_index)
+            instance = jobhunt_hook.models['kw_search_relation'](keyword_id=kw_index,
+                                                                 searched_keyword_id=searched_kw_index)
+
+            query = jobhunt_hook.query('kw_search_relation').filter_by(keyword_id=instance.keyword_id,
+                                                                       searched_keyword_id=instance.searched_keyword_id)
+            if not query.scalar():
                 jobhunt_hook.session.add(instance)
 
         jobhunt_hook.session.commit()
